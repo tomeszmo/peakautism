@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Peak Autism</title>
-    <link rel="icon" type="image/png" href="./icon.png">
-
-    <link rel="apple-touch-icon" href="./icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
+    <div class="blob-container">
+        <div class="blob b1"></div>
+        <div class="blob b2"></div>
+        <div class="blob b3"></div>
+    </div>
 
     <div id="app-container">
         <header>
@@ -23,7 +22,9 @@
         </header>
 
         <div class="card-stack">
-            <div class="dummy-card"></div>
+            <div class="deck-card d3"></div>
+            <div class="deck-card d2"></div>
+            <div class="deck-card d1"></div>
 
             <main id="main-card" class="card">
                 <div id="skeleton-loader" class="skeleton-container">
@@ -35,13 +36,10 @@
 
                 <div id="real-content" class="card-content hidden">
                     <h2 id="topic-title">Loading...</h2>
-                    
                     <div id="card-image-container" class="hidden">
                         <img id="topic-image" src="" alt="Kép">
                     </div>
-
-                    <div id="summary-text">Click the button!</div>
-                    
+                    <div id="summary-text">Kattints a gombra!</div>
                     <div class="source-wrapper">
                         <a id="source-link" href="#" target="_blank">OPEN SOURCE ↗</a>
                     </div>
@@ -55,7 +53,6 @@
     </div>
     
     <audio id="click-sound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3" preload="auto"></audio>
-    
-    <script src="app.js?v=4"></script>
+    <script src="app.js"></script>
 </body>
 </html>

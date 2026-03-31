@@ -1,17 +1,18 @@
-/* --- ALAPOK --- */
-body {
+/* --- 1. ALAPOK ÉS HÁTTÉR (FIXÁLT, GÖRGETÉS MENTES) --- */
+html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Megakadályozza az oldal görgetését */
+    background-color: #050505;
     font-family: 'Quicksand', sans-serif;
-    display: flex;
-    justify-content: center;
-    height: 100vh;
-    overflow: hidden;
-    background-color: #050505; /* Még sötétebb alap a kontraszt miatt */
-    position: relative;
+    /* Megszünteti a mobilokon a frissítő lehúzást */
+    overscroll-behavior: none; 
+    position: fixed; 
 }
 
-/* --- ERŐSÍTETT GYERTYAFÉNY EFFEKTUS --- */
+/* ERŐSÍTETT GYERTYAFÉNY EFFEKTUS */
 body::before {
     content: "";
     position: absolute;
@@ -34,6 +35,7 @@ body::after {
     height: 200%;
     opacity: 0.25;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='10' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    pointer-events: none;
 }
 
 @keyframes candleLight {
@@ -44,28 +46,7 @@ body::after {
     100% { transform: scale(1) translate(0, 0); opacity: 0.7; }
 }
 
-#app-container {
-    width: 100%;
-    max-width: 420px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    box-sizing: border-box;
-    position: relative;
-    z-index: 10;
-}
-
-.app-title {
-    color: white;
-    text-align: center;
-    font-size: 28px;
-    margin: 15px 0;
-    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    flex-shrink: 0;
-}
-
-/* --- MOZGÓ BUBORÉKOK --- */
+/* --- 2. MOZGÓ BUBORÉKOK --- */
 .blob-container {
     position: absolute;
     top: 0; left: 0;
@@ -95,86 +76,187 @@ body::after {
     100% { transform: translate(-60px, 140px) scale(0.9) rotate(-45deg); }
 }
 
-/* --- KÁRTYA STACK ÉS DUMMY KÁRTYA --- */
+/* --- 3. ALKALMAZÁS KONTÉNER (CENTRALIZÁLT) --- */
+#app-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 10;
+}
+
+.app-title {
+    color: white;
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+}
+
+/* --- 4. KÁRTYA STACK ÉS FIXÁLT MÉRETEK --- */
 .card-stack {
-    flex-grow: 1;
+    width: 90vw;
+    max-width: 400px;
+    height: 60vh; /* FIX MAGASSÁG */
     display: flex;
     align-items: center;
     justify-content: center;
     perspective: 1200px;
     position: relative;
-    /* Ide kerül a transition a sima mozgáshoz */
-    transition: transform 0.1s ease-out;
-    transform-style: preserve-3d;
+    z-index: 5;
+    flex-shrink: 0; /* Megakadályozza az összenyomódást */
 }
 
-.dummy-card {
+/* Dekoratív pakli rétegek (Dummy Deck) */
+.deck-card {
     position: absolute;
-    width: 100%;
-    height: 60vh;
     background: #ffffff;
     border-radius: 30px;
-    opacity: 0.5;
-    z-index: 1;
-    /* Ez akadályozza meg, hogy a dőlésnél "egymásba vágjanak" */
-    transform: translateZ(-1px); 
+    width: 100%; /* A .card-stack-hez igazodik */
+    height: 100%;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    pointer-events: none;
 }
 
+.d1 { z-index: 3; transform: translateY(-10px) translateX(5px) rotateZ(1.5deg) scale(0.98); }
+.d2 { z-index: 2; transform: translateY(-20px) translateX(-6px) rotateZ(-2deg) scale(0.96); }
+.d3 { z-index: 1; transform: translateY(-30px) translateX(3px) rotateZ(1deg) scale(0.94); }
+
+/* A tényleges kártya */
 .card {
     background: #ffffff;
     border-radius: 30px;
     width: 100%;
-    height: 60vh;
+    height: 100%;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); 
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
     z-index: 10;
-    /* Az opacity transition marad, de a transformot a szülő kezeli */
-    transition: opacity 0.5s ease-in-out;
+    opacity: 0; /* JS indítja */
+    transform: translate(0, 0); 
+    will-change: transform, opacity;
 }
 
-.card.animating {
-    transition: transform 0.6s cubic-bezier(0.45, 0, 0.55, 1), opacity 0.5s ease !important;
+/* --- 5. JAVÍTOTT ANIMÁCIÓ (SNAPPING ELLEN) --- */
+@keyframes card-deal {
+    0% { 
+        transform: translateY(-30px) scale(0.95); 
+        opacity: 0; 
+    }
+    100% { 
+        transform: translateY(0) scale(1); 
+        opacity: 1; 
+    }
 }
 
+.card-dealing {
+    animation: card-deal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+}
+
+/* --- 6. KÁRTYA TARTALOM --- */
 .card-content {
     padding: 25px;
     overflow-y: auto;
     flex-grow: 1;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y; /* Csak belső görgetést enged */
 }
 
 #topic-title { color: #0f172a; font-size: 22px; margin: 0 0 15px 0; font-weight: 700; }
-#card-image-container { width: 100%; height: 160px; margin-bottom: 15px; flex-shrink: 0; border-radius: 15px; overflow: hidden; }
-#topic-image { width: 100%; height: 100%; object-fit: contain; background: #f1f5f9; }
+#card-image-container { width: 100%; margin-bottom: 15px; border-radius: 15px; overflow: hidden; }
+#topic-image { width: 100%; display: block; border-radius: 15px; object-fit: contain; }
 #summary-text { color: #334155; font-size: 16px; line-height: 1.6; }
 
+/* OPEN SOURCE LINK STÍLUS */
 .source-wrapper { margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-#source-link { color: #22c55e; text-decoration: none; font-weight: 700; font-size: 14px; }
+#source-link { 
+    color: #22c55e; 
+    text-decoration: none; 
+    font-weight: 700; 
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
 
-/* --- GOMB STÍLUSOK --- */
+#source-link:hover {
+    color: #16a34a; 
+}
+
+/* --- 7. SKELETON LOADER (FIX MÉRETBEN) --- */
+.skeleton-container { 
+    padding: 25px; 
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.skeleton-title, .skeleton-image, .skeleton-text {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-wave 1.5s infinite linear;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+.skeleton-title { height: 30px; width: 70%; }
+.skeleton-image { height: 160px; width: 100%; }
+.skeleton-text { height: 15px; width: 100%; margin-bottom: 10px; }
+.skeleton-text.short { width: 50%; }
+
+@keyframes skeleton-wave {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* --- 8. FOOTER ÉS FIXÁLT GOMB --- */
 footer {
-    padding-bottom: 20px;
+    padding: 20px 0;
+    width: 90vw;
+    max-width: 400px;
     flex-shrink: 0;
     position: relative;
     z-index: 20;
 }
 
 .duo-button {
-    background: #399bbe;
+    background: #399bbe; /* Alap kék */
     color: white;
     border: none;
     width: 100%;
-    padding: 18px;
+    height: 60px;
     border-radius: 20px;
     font-size: 18px;
     font-weight: 700;
-    border-bottom: 5px solid #336c84;
+    border-bottom: 5px solid #336c84; /* A 3D hatás alul */
     cursor: pointer;
     box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    transition: all 0.2s;
+    transition: all 0.2s ease; /* Sima átmenet mindenre */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     -webkit-tap-highlight-color: transparent;
+}
+
+/* --- HOVER STATE (EGÉR RÁVITEL) --- */
+.duo-button:hover:not(:disabled) {
+    background: #2d82a1; /* Sötétebb kék */
+    border-bottom: 5px solid #265366; /* Sötétebb 3D perem */
+    transform: translateY(-2px); /* Picit megemelkedik */
+    box-shadow: 0 12px 25px rgba(0,0,0,0.4); /* Erősebb árnyék */
+}
+
+/* --- ACTIVE STATE (KATTINTÁS PILLANATA) --- */
+.duo-button:active:not(:disabled) { 
+    border-bottom-width: 0; /* Eltűnik a perem, "benyomódik" */
+    transform: translateY(5px); /* Lejjebb ugrik a benyomódás miatt */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
 .duo-button:disabled {
@@ -186,7 +268,4 @@ footer {
     box-shadow: none;
 }
 
-.duo-button:active:not(:disabled) { border-bottom-width: 0; transform: translateY(5px); }
-
-/* --- ANIMÁCIÓS ÁLLAPOTOK --- */
 .hidden { display: none !important; }
