@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Peak Autism</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=4">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div id="app-container">
+        <header>
+            <h1 class="app-title">PEAK AUTISM</h1>
+        </header>
+
+        <div class="card-stack">
+            <main id="main-card" class="card">
+                <div id="skeleton-loader" class="skeleton-container">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-image"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                </div>
+
+                <div id="real-content" class="card-content hidden">
+                    <h2 id="topic-title">Loading...</h2>
+                    
+                    <div id="card-image-container" class="hidden">
+                        <img id="topic-image" src="" alt="Kép">
+                    </div>
+
+                    <div id="summary-text">Click the button!</div>
+                    
+                    <div class="source-wrapper">
+                        <a id="source-link" href="#" target="_blank">OPEN SOURCE ↗</a>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            <button id="new-topic-btn" class="duo-button">NEXT TOPIC</button>
+        </footer>
+    </div>
+    
+    <audio id="click-sound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3" preload="auto"></audio>
+    
+    <script src="app.js?v=4"></script>
+</body>
+</html>
