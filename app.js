@@ -1,144 +1,165 @@
 /**
- * TudásFalat - Teljes, Minden Funkciót Tartalmazó Logika
+ * PEAK AUTISM - Teljes Logika
+ * Funkciók: 3mp fix betöltés, fordítás, dummy-card kezelés, 
+ * szinkronizált egér- és giroszkóp alapú dőlés.
  */
 
-// --- ELEMEK KIJELÖLÉSE ---
+// --- 1. ELEMEK KIJELÖLÉSE ---
 const titleEl = document.getElementById('topic-title');
 const summaryEl = document.getElementById('summary-text');
 const linkEl = document.getElementById('source-link');
 const btn = document.getElementById('new-topic-btn');
 const card = document.getElementById('main-card');
+const cardStack = document.querySelector('.card-stack'); 
 const imageEl = document.getElementById('topic-image');
 const imageContainer = document.getElementById('card-image-container');
 const clickSound = document.getElementById('click-sound');
 const skeletonLoader = document.getElementById('skeleton-loader');
 const realContent = document.getElementById('real-content');
 
-// --- HANGKEZELÉS ---
+// --- 2. HANGKEZELÉS ---
 function playClickSound() {
     if (clickSound) {
         clickSound.pause();
         clickSound.currentTime = 0;
-        clickSound.volume = 0.5;
-        clickSound.play().catch(err => console.log("Hanglejátszási korlát a böngészőben."));
+        clickSound.volume = 0.4;
+        clickSound.play().catch(() => {});
     }
 }
 
-// --- FORDÍTÓ MOTOR (Szigorú Magyarítás) ---
+// --- 3. FORDÍTÓ MOTOR ---
 async function translateToHungarian(text) {
     if (!text || text.length < 2) return text;
     try {
-        // Alulvonalak cseréje szóközre (Wiki címeknél fontos)
         const cleanText = text.replace(/_/g, ' ').trim();
-        
-        // MyMemory API hívás magyar-angol párral
         const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=en|hu`);
         const data = await res.json();
-        
-        if (data.responseStatus === 200) {
-            return data.responseData.translatedText;
-        }
-        return cleanText; // Ha az API hibázik, az eredeti tisztított szöveg marad
+        return data.responseStatus === 200 ? data.responseData.translatedText : cleanText;
     } catch (error) {
-        console.error("Fordítási hiba:", error);
         return text;
     }
 }
 
-// --- FŐ FUNKCIÓ: ÚJ TÉMA LEKÉRÉSE ---
+// --- 4. FŐ FUNKCIÓ: ÚJ TÉMA LEKÉRÉSE ---
 async function getNewTopic() {
-    // 1. Előkészületek: gomb tiltása, hang, kártya kirepítése
+    // Első kattintáskor engedélyt kérünk a giroszkóphoz (iOS specifikus)
+    requestDeviceOrientation();
+    
     playClickSound();
     btn.disabled = true;
     btn.innerText = "SEARCHING...";
-    
-    // Kártya animáció indítása és Skeleton mutatása
-    card.classList.add('card-exit');
-    realContent.classList.add('hidden');
-    skeletonLoader.classList.remove('hidden');
+
+    card.style.opacity = "0";
+    const minWaitTimer = new Promise(resolve => setTimeout(resolve, 3000));
 
     try {
-        // 2. Wikipedia API hívás (Véletlenszerű összefoglaló)
-        const response = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
-        if (!response.ok) throw new Error("Hálózati hiba");
-        const data = await response.json();
+        const fetchTask = (async () => {
+            const response = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
+            if (!response.ok) throw new Error("Wiki hiba");
+            const data = await response.json();
 
-        // 3. Fordítás megvárása (Cím és Szöveg külön-külön)
-        // A kettőt egyszerre indítjuk el a gyorsaság miatt (Promise.all)
-        const [translatedTitle, translatedSummary] = await Promise.all([
-            translateToHungarian(data.title),
-            translateToHungarian(data.extract)
-        ]);
+            const [tTitle, tSummary] = await Promise.all([
+                translateToHungarian(data.title),
+                translateToHungarian(data.extract)
+            ]);
 
-        // 4. Adatok beillesztése a HTML-be (még rejtve)
-        titleEl.innerText = translatedTitle;
-        summaryEl.innerText = translatedSummary;
+            return { data, tTitle, tSummary };
+        })();
+
+        const [result] = await Promise.all([fetchTask, minWaitTimer]);
+        const { data, tTitle, tSummary } = result;
+
+        realContent.classList.add('hidden');
+        skeletonLoader.classList.remove('hidden');
+
+        titleEl.innerText = tTitle;
+        summaryEl.innerText = tSummary;
         linkEl.href = data.content_urls.desktop.page;
 
-        // Kép kezelése
         if (data.originalimage && data.originalimage.source) {
             imageEl.src = data.originalimage.source;
             imageContainer.classList.remove('hidden');
-            // Biztonsági elrejtés, ha a kép nem tölthető be
             imageEl.onerror = () => imageContainer.classList.add('hidden');
         } else {
             imageContainer.classList.add('hidden');
         }
 
-        // 5. Animációs fázis: Várunk 500ms-t, hogy az animáció és a fordítás szép legyen
-        setTimeout(() => {
-            // Skeleton elrejtése, tartalom mutatása
-            skeletonLoader.classList.add('hidden');
-            realContent.classList.remove('hidden');
-            
-            // Görgetés vissza a kártya tetejére
-            const contentBox = document.querySelector('.card-content');
-            if (contentBox) contentBox.scrollTop = 0;
+        const contentBox = card.querySelector('.card-content');
+        if (contentBox) contentBox.scrollTop = 0;
 
-            // Kártya beúsztatása a túloldalról
-            card.classList.remove('card-exit');
-            card.classList.add('card-enter');
+        skeletonLoader.classList.add('hidden');
+        realContent.classList.remove('hidden');
 
-            setTimeout(() => {
-                card.classList.remove('card-enter');
-                btn.disabled = false;
-                btn.innerText = "NEXT TOPIC";
-            }, 100);
-        }, 500);
+        card.style.opacity = "1";
+        btn.disabled = false;
+        btn.innerText = "NEXT TOPIC";
 
     } catch (err) {
-        console.error("Hiba:", err);
+        console.error(err);
+        await minWaitTimer;
         btn.disabled = false;
-        btn.innerText = "HIBA - ÚJRA";
-        card.classList.remove('card-exit');
+        btn.innerText = "ERROR - RETRY";
+        card.style.opacity = "1";
     }
 }
 
-// --- INTERAKTÍV KÁRTYA DŐLÉS (Tilt Effekt asztali gépre) ---
+// --- 5. DŐLÉS EFFEKTUSOK (ASZTALI + MOBIL) ---
+
+// ASZTALI: Egérmozgás alapú dőlés
+// Csak a kártya feletti mozgásra figyelünk a természetesebb érzetért
 card.addEventListener('mousemove', (e) => {
-    if (window.innerWidth < 768) return; // Mobilon ne dőljön
+    if (window.innerWidth < 768 || !cardStack) return;
     
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left - rect.width / 2;
     const y = e.clientY - rect.top - rect.height / 2;
     
-    // Max 10 fokos dőlés
     const rotateX = (-y / (rect.height / 2)) * 10;
     const rotateY = (x / (rect.width / 2)) * 10;
     
-    requestAnimationFrame(() => {
-        card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-    });
+    cardStack.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 });
 
 card.addEventListener('mouseleave', () => {
-    card.style.transform = `rotateX(0deg) rotateY(0deg) scale(1)`;
+    if (window.innerWidth >= 768 && cardStack) {
+        cardStack.style.transform = `rotateX(0deg) rotateY(0deg)`;
+    }
 });
 
-// --- ESEMÉNYFIGYELŐK ÉS INDÍTÁS ---
+// MOBIL: Giroszkóp alapú dőlés
+function handleOrientation(event) {
+    if (window.innerWidth >= 768 || !cardStack) return;
+
+    // béta: előre-hátra dőlés (-180-tól 180-ig)
+    // gamma: balra-jobbra dőlés (-90-től 90-ig)
+    const beta = event.beta; 
+    const gamma = event.gamma;
+
+    // Normalizáljuk az értékeket, hogy ne dőljön túl nagyot (max 15 fok)
+    const rotX = Math.max(Math.min((beta - 45) / 2, 15), -15);
+    const rotY = Math.max(Math.min(gamma / 2, 15), -15);
+
+    cardStack.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+}
+
+// iOS engedélykérés a szenzorokhoz
+function requestDeviceOrientation() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            })
+            .catch(console.error);
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+    }
+}
+
+// --- 6. INDÍTÁS ---
 btn.addEventListener('click', getNewTopic);
 
-// Első betöltéskor automatikus indítás egy kis késleltetéssel
 window.addEventListener('load', () => {
-    setTimeout(getNewTopic, 500);
+    getNewTopic();
 });
