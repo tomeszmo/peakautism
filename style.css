@@ -58,12 +58,11 @@ body::after {
 
 .blob {
     position: absolute;
-    background: #58cc02;
     border-radius: 50%;
-    opacity: 0.6;
-    transform: translateZ(0);
+    opacity: 0.4; /* Kicsit lejjebb vettem, hogy ne legyen zavaró */
     will-change: transform;
-    animation: move 15s infinite alternate ease-in-out;
+    /* Kivesszük a fix 'move' animációt, vagy hagyjuk, de a JS-sel eltoljuk */
+    transition: transform 0.6s ease-out; /* Lágy követés a háttérnek */
 }
 
 .b1 { width: 500px; height: 500px; top: -100px; left: -50px; background: #22c55e; animation-duration: 20s; }
@@ -130,7 +129,6 @@ body::after {
 
 /* A tényleges kártya */
 .card {
-    background: #ffffff;
     border-radius: 30px;
     width: 100%;
     height: 100%;
@@ -198,22 +196,22 @@ body::after {
     box-sizing: border-box;
 }
 
-.skeleton-title, .skeleton-image, .skeleton-text {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: skeleton-wave 1.5s infinite linear;
-    border-radius: 10px;
-    margin-bottom: 15px;
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
+
+.skeleton-title, .skeleton-image, .skeleton-text {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s infinite ease-in-out;
+}
+
 .skeleton-title { height: 30px; width: 70%; }
 .skeleton-image { height: 160px; width: 100%; }
 .skeleton-text { height: 15px; width: 100%; margin-bottom: 10px; }
 .skeleton-text.short { width: 50%; }
 
-@keyframes skeleton-wave {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
 
 /* --- 8. FOOTER ÉS FIXÁLT GOMB --- */
 footer {
@@ -266,6 +264,271 @@ footer {
     cursor: not-allowed;
     transform: none !important;
     box-shadow: none;
+}
+
+/* --- 9. EGYEDI GÖRDÍTŐSÁV (SCROLLBAR) --- */
+
+/* Alapértelmezett görgetősáv elrejtése minden böngészőben */
+.card-content {
+    padding: 25px;
+    overflow-y: auto;
+    flex-grow: 1;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    
+    /* Firefox-hoz */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s;
+}
+
+/* Chrome, Safari, Edge (WebKit) */
+.card-content::-webkit-scrollbar {
+    width: 4px; /* Nagyon vékony sáv */
+}
+
+.card-content::-webkit-scrollbar-track {
+    background: transparent; /* A sáv útja láthatatlan */
+}
+
+.card-content::-webkit-scrollbar-thumb {
+    background: transparent; /* Alapból a csúszka is láthatatlan */
+    border-radius: 10px;
+    transition: background 0.3s;
+}
+
+/* AMIKOR INTERAKCIÓ VAN (Hover vagy Görgetés) */
+/* Megjegyzés: a webkit nem támogatja a "görgetés közbeni" szelektorokat tisztán CSS-ben, 
+   ezért a kártya fölé vitt egérnél aktiváljuk a láthatóságot */
+.card-content:hover::-webkit-scrollbar-thumb,
+.card-content:active::-webkit-scrollbar-thumb {
+    background: #22c55e; /* Megjelenik a zöld csúszka */
+}
+
+/* Firefox interakció */
+.card-content:hover {
+    scrollbar-color: #22c55e transparent;
+}
+
+.app-title {
+    text-align: center;
+    font-size: 38px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    margin: 0;
+    padding-bottom: 25px;
+    flex-shrink: 0;
+    font-family: 'Quicksand', sans-serif;
+    position: relative;
+    display: inline-block;
+    width: auto;
+    
+    /* --- TISZTA FEHÉR SZÍN (KONTÚR NÉLKÜL) --- */
+    color: #ffffff;
+    
+    /* --- PRÉMIUM 3D HATÁS --- */
+    text-shadow: 
+        0 1px 0 #d1d5db,
+        0 2px 0 #c4c7cc,
+        0 3px 0 #b0b4b8,
+        0 4px 0 #a1a5a9,
+        0 5px 1px rgba(0,0,0,0.1),
+        0 0 10px rgba(0,0,0,0.2),
+        0 15px 25px rgba(0,0,0,0.5);
+        
+    transform: skewX(-5deg); /* Dinamikus dőlés */
+}
+
+/* --- A CSILLAG PONTOSAN AZ 'M' JOBB FELSŐ CSÚCSÁN --- */
+.app-title::after {
+    content: "";
+    position: absolute;
+    
+    /* --- POZICIONÁLÁS AZ 'M' CSÚCSÁRA --- */
+    /* A top: -12px és right: -12px értékekkel pontosan az utolsó betű sarkára kerül */
+    top: 2px;            
+    right: -4px;          
+    
+    width: 24px;          /* Picit növelt méret a jobb láthatóságért */
+    height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='white'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    
+    /* Erős fehér fényudvar a csillagnak */
+    filter: drop-shadow(0 0 8px white) drop-shadow(0 0 15px rgba(255,255,255,0.8));
+    
+    /* Animáció: 7 másodpercenként egy gyors villanás */
+    animation: sparkleAnimation 7s infinite ease-in-out;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 20;
+}
+
+/* --- ANIMÁCIÓ: GYORS FELVILLANÁS ÉS FORGÁS --- */
+@keyframes sparkleAnimation {
+    0% { 
+        transform: scale(0) rotate(0deg); 
+        opacity: 0; 
+    }
+    4% { 
+        transform: scale(1.3) rotate(30deg); /* Nagyobb forgatás és méret a csúcsponton */
+        opacity: 1; 
+    }
+    12% { 
+        transform: scale(0) rotate(-10deg); 
+        opacity: 0; 
+    }
+    100% { 
+        transform: scale(0) rotate(-10deg); 
+        opacity: 0; 
+    }
+}
+
+/* --- SKELETON LOADER FIX - OKOSABB VERZIÓ --- */
+#skeleton-loader {
+    display: flex; /* Kivettük az !important-ot innen */
+    flex-direction: column;
+    padding: 25px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: #ffffff;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 15;
+    border-radius: 30px;
+}
+
+/* Ez a sor kényszeríti az eltűnést, ha a JS kiadja a parancsot */
+#skeleton-loader.hidden {
+    display: none !important;
+}
+
+.skeleton-title, .skeleton-image, .skeleton-text {
+    background: #e2e8f0;
+    background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-wave 1.5s infinite linear;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    display: block !important;
+}
+
+.skeleton-title { height: 35px !important; width: 80% !important; }
+.skeleton-image { height: 200px !important; width: 100% !important; }
+.skeleton-text { height: 18px !important; width: 100% !important; }
+.skeleton-text.short { width: 60% !important; }
+
+@keyframes skeleton-wave {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+#card-image-container {
+    position: relative;
+}
+#card-image-container::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 30%;
+    background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
+    pointer-events: none;
+}
+
+.card-content {
+    mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+}
+
+/* --- JAVÍTOTT GLASSMORPHISM KÁRTYA --- */
+.card {
+    /* FONTOS: A sima #ffffff-et töröld ki! Csak az rgba maradjon: */
+    background: rgba(255, 255, 255, 0.75) !important; 
+    
+    /* Az elmosás ereje */
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    
+    /* Egyéb stílusok, amik már megvoltak */
+    border-radius: 30px;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2); 
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+    
+    /* Egy leheletvékony fehér keret, ami kiemeli az üveg élét */
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    
+    opacity: 0; /* JS indítja */
+    will-change: transform, opacity;
+}
+
+/* A belső tartalom hátterét is vedd ki, ha esetleg adtál neki, 
+   hogy ne takarja el az üveget */
+.card-content {
+    background: transparent !important;
+}
+
+/* --- 3D KÉP ELŐKÉSZÍTÉSE --- */
+#card-image-container {
+    width: 100%;
+    margin-bottom: 15px;
+    border-radius: 15px;
+    
+    /* FONTOS: Perspektíva a belső 3D-hez */
+    perspective: 1000px; 
+    
+    /* Biztosítjuk, hogy a belső elemek megőrizzék a 3D teret */
+    transform-style: preserve-3d; 
+    position: relative;
+    
+    /* Árnyék, ami a kép alatt van, de a vastagság felett */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+    
+    /* A korábbi gradiens overlay és egyéb stílusok maradnak */
+}
+
+#topic-image {
+    width: 100%;
+    display: block;
+    border-radius: 15px;
+    object-fit: contain;
+    
+    /* Alaphelyzetben nincs dőlés, a JS kezeli */
+    transform: translateZ(0px); 
+    
+    /* Sima átmenet a dőléshez */
+    transition: transform 0.1s linear; 
+}
+
+/* --- FINOMÍTOTT, DISZKRÉT PULZÁLÁS --- */
+.duo-button:not(:disabled) {
+    /* Lassabb, 4 másodperces ciklus a nyugodtabb hatásért */
+    animation: border-glow-soft 4s infinite ease-in-out;
+    position: relative;
+}
+
+@keyframes border-glow-soft {
+    0% {
+        /* Alap árnyék, nincs extra körvonal */
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2), 0 0 0 0px rgba(34, 197, 94, 0);
+    }
+    50% {
+        /* Csak 6px-re tágul ki és nagyon halvány (0.3) */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.25), 0 0 0 6px rgba(34, 197, 94, 0.2);
+    }
+    100% {
+        /* Visszahúzódik */
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2), 0 0 0 0px rgba(34, 197, 94, 0);
+    }
 }
 
 .hidden { display: none !important; }
