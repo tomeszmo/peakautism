@@ -56,7 +56,6 @@ body::after {
 /* KÉPEK ELHÚZÁSÁNAK TILTÁSA (hogy ne a böngésző "szellemképe" jöjjön elő húzáskor) */
 img {
     -webkit-user-drag: none;
-    user-drag: none;
     pointer-events: none; /* Így az egér események "átmennek" a képen a kártyára */
 }
 
