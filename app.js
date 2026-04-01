@@ -1,54 +1,36 @@
-/**
- * PEAK AUTISM - Végleges, Stabilizált Verzió
- * Funkciók: 3D kártyamozgás, 1mp Skeleton várakozás, Azonnali gomb-reaktiválás
- */
+// --- 1. GLOBÁLIS VÁLTOZÓK ---
+let topicCount = 0; 
+let lerpFactor = 0.05; 
+let isDealing = false; 
+let isLocked = true; 
+let curX = 0; let curY = 0;
+let tgtX = 0; let tgtY = 0;
+let isDragging = false;
+let startX = 0;
+let currentTranslateX = 0;
 
-let currentLerp = 0.02; // Kezdeti nagyon lassú követés
-const targetLerp = 0.08; // A végleges, reszponzív sebesség
+// --- 2. ELEMEK LEKÉRÉSE (Ellenőrizd a HTML-ben az ID-kat!) ---
+const titleEl = document.getElementById('topic-title');
+const summaryEl = document.getElementById('summary-text');
+const linkEl = document.getElementById('source-link');
+const card = document.getElementById('main-card');
+const imageEl = document.getElementById('topic-image');
+const imageContainer = document.getElementById('card-image-container');
+const skeletonLoader = document.getElementById('skeleton-loader');
+const realContent = document.getElementById('real-content');
+const countEl = document.getElementById('topic-count');
+const counterBadge = document.getElementById('session-counter');
 
-// Segédfüggvény: megvárja, amíg egy kép ténylegesen letöltődik
+// --- 3. SEGÉDFÜGGVÉNYEK ---
 function loadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = url;
         img.onload = () => resolve(url);
-        img.onerror = () => reject(new Error("Kép betöltési hiba"));
+        img.onerror = () => reject(new Error("Kép hiba"));
     });
 }
 
-// --- 1. ELEMEK ---
-const titleEl = document.getElementById('topic-title');
-const summaryEl = document.getElementById('summary-text');
-const linkEl = document.getElementById('source-link');
-const btn = document.getElementById('new-topic-btn');
-const card = document.getElementById('main-card');
-const imageEl = document.getElementById('topic-image');
-const imageContainer = document.getElementById('card-image-container');
-const clickSound = document.getElementById('click-sound');
-const skeletonLoader = document.getElementById('skeleton-loader');
-const realContent = document.getElementById('real-content');
-
-
-
-let isDealing = false; 
-let isLocked = true; // Blokkolja a mozgást az animáció végéig
-let curX = 0;
-let curY = 0;
-let tgtX = 0;
-let tgtY = 0;
-let lerpFactor = 0.05; // Finom követés
-
-// --- 2. HANGKEZELÉS ---
-function playClickSound() {
-    if (clickSound) {
-        clickSound.pause();
-        clickSound.currentTime = 0;
-        clickSound.volume = 0.4;
-        clickSound.play().catch(() => {});
-    }
-}
-
-// --- 3. FORDÍTÓ ---
 async function translateToHungarian(text) {
     if (!text || text.length < 2) return text;
     try {
@@ -56,330 +38,252 @@ async function translateToHungarian(text) {
         const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=en|hu`);
         const data = await res.json();
         return data.responseStatus === 200 ? data.responseData.translatedText : cleanText;
-    } catch (error) { 
-        return text; 
-    }
+    } catch (error) { return text; }
 }
 
-// --- 4. FŐ FUNKCIÓ ---
+// --- 4. A FŐ FUNKCIÓ (SCROLL RESET + SKELETON + 1S WAIT) ---
 async function getNewTopic() {
-    requestDeviceOrientation(); 
-    playClickSound();
-
-    const stack = document.querySelector('.card-stack');
-    if (stack) stack.classList.add('stack-active');
+    requestMotionPermission(); // <--- EZT ADTAM HOZZÁ: Minden kártyaváltásnál megpróbálja aktiválni a szenzort
     
-    // 1. GOMB ÉS ÁLLAPOT RESET
-    btn.disabled = true;
-    const loadingTexts = ["SEARCHING...", "DEALING CARDS...", "PEAKING..."];
-    btn.innerText = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
-    isDealing = true; 
+    if (isDealing) return;
+    isDealing = true;
     isLocked = true;
     
-    // 2. RÉGI TARTALOM AZONNALI TÖRLÉSE
-    titleEl.innerText = "";
-    summaryEl.innerText = "";
-    imageEl.src = "";
-    imageContainer.classList.add('hidden');
+    card.style.opacity = "1";
+    card.style.transform = "translateX(0) rotate(0deg) scale(1)";
+    card.classList.remove('hidden'); 
     
-    // 3. KÁRTYA ÉS GÖRDÍTÉS ELŐKÉSZÍTÉSE
-    card.classList.remove('card-dealing');
-    card.style.opacity = "1"; 
+    // Skeleton mutatása, tartalom elrejtése az elején
+    if (skeletonLoader) skeletonLoader.classList.remove('hidden');
+    if (realContent) realContent.classList.add('hidden');
+
+    // UI ELŐKÉSZÍTÉSE
+    if (skeletonLoader) skeletonLoader.classList.remove('hidden');
+    if (realContent) realContent.classList.add('hidden');
+    if (imageContainer) imageContainer.classList.add('hidden');
     
-    const contentBox = card.querySelector('.card-content');
+    // SCROLL RESET - Megkeressük a görgethető dobozt
+    const contentBox = document.querySelector('.card-content');
     if (contentBox) {
+        contentBox.scrollTop = 0;
         contentBox.style.overflowY = "hidden";
-        contentBox.scrollTop = 0; // Első fázisú nullázás
     }
-    
-    skeletonLoader.classList.remove('hidden');
-    realContent.classList.add('hidden');
+
+    const startTime = Date.now();
 
     try {
-        // 4. ADATOK LEKÉRÉSE ÉS FORDÍTÁS
         const response = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
         const data = await response.json();
-        
+
+        // Fordítás és Kép párhuzamosan
         const translationPromise = Promise.all([
             translateToHungarian(data.title),
             translateToHungarian(data.extract)
         ]);
+        const imagePromise = data.originalimage ? loadImage(data.originalimage.source) : Promise.resolve();
 
-        // 5. KÉP ELŐTÖLTÉSE (Ha van)
-        let imagePromise = Promise.resolve();
-        if (data.originalimage) {
-            imagePromise = loadImage(data.originalimage.source);
-        }
-
-        // 6. MEGVÁRJUK A TELJES BETÖLTÉST (Fordítás + Kép)
         const [translations] = await Promise.all([translationPromise, imagePromise]);
         const [tTitle, tSum] = translations;
 
-        // 7. ADATOK BEÍRÁSA
-        titleEl.innerText = tTitle || data.title;
-        summaryEl.innerText = tSum || data.extract;
-        linkEl.href = data.content_urls.desktop.page;
+        // Minimum 1 másodperc várakozás
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1000) await new Promise(r => setTimeout(r, 1000 - elapsed));
 
-        if (data.originalimage) {
+        // ADATOK BEHELYEZÉSE
+        if (titleEl) titleEl.innerText = tTitle || data.title;
+        if (summaryEl) summaryEl.innerText = tSum || data.extract;
+        if (linkEl) linkEl.href = data.content_urls.desktop.page;
+        if (imageEl && data.originalimage) {
             imageEl.src = data.originalimage.source;
             imageContainer.classList.remove('hidden');
-        } else {
-            imageContainer.classList.add('hidden');
         }
 
-        // A getNewTopic-ban, ahol a címet és képet állítod be:
-const randomHue = Math.floor(Math.random() * 360); // Generálunk egy véletlen színt
-document.querySelectorAll('.blob').forEach(blob => {
-    // A színeket a HSL skálán mozgatjuk a lágyabb hatásért
-    blob.style.background = `hsla(${randomHue}, 70%, 50%, 0.6)`;
-});
+        // --- 1. ADATOK BEILLESZTÉSE ---
+titleEl.innerText = tTitle || data.title;
+summaryEl.innerText = tSum || data.extract;
+linkEl.href = data.content_urls.desktop.page;
 
-
-        // --- DINAMIKUS SZÍN GENERÁLÁSA ÉS ALKALMAZÁSA ---
-try {
-    const randomHue2 = Math.floor(Math.random() * 360); 
-
-    // 1. Háttér blobok
-    const blobs = document.querySelectorAll('.blob');
-    if (blobs.length > 0) {
-        blobs.forEach((blob, index) => {
-            const hueShift = index * 25; 
-            blob.style.background = `hsla(${randomHue2 + hueShift}, 75%, 50%, 0.5)`;
-        });
-    }
-
-    // 2. Gomb színezése - Biztonsági ellenőrzéssel
-    const actionBtn = document.getElementById('new-topic-btn'); // Közvetlen lekérés a hiba ellen
-    if (actionBtn) {
-        const mainColor = `hsl(${randomHue2}, 70%, 45%)`;
-        const darkEdge = `hsl(${randomHue2}, 70%, 30%)`;
-        const glowColor = `hsla(${randomHue2}, 70%, 50%, 0.4)`;
-
-        actionBtn.style.backgroundColor = mainColor;
-        actionBtn.style.borderBottomColor = darkEdge;
-        
-        // CSS változó beállítása az animációhoz
-        actionBtn.style.setProperty('--glow-color', glowColor);
-    }
-} catch (colorError) {
-    console.warn("Színezési hiba (kihagyva):", colorError);
+// --- 2. AZONNALI TETEJÉRE UGRÁS (A TITOK) ---
+const contentBox = document.querySelector('.card-content');
+if (contentBox) {
+    // Először nullázzuk a pozíciót
+    contentBox.scrollTop = 0;
+    
+    // Majd egy "mikro-várakozással" kényszerítjük a böngészőt, 
+    // hogy az új, már renderelt szöveg tetejére ugorjon
+    requestAnimationFrame(() => {
+        contentBox.scrollTo({ top: 0, behavior: 'instant' });
+        contentBox.scrollTop = 0;
+    });
 }
 
-        // --- KRITIKUS PONT: GÖRDÍTÉS ÚJRA KÉNYSZERÍTÉSE ---
-        if (contentBox) {
-            contentBox.scrollTop = 0; // Második fázisú nullázás a tartalom betöltése után
-        }
+        // Számláló növelése
+        topicCount++;
+        if (countEl) countEl.innerText = topicCount;
 
-        // 8. VÁLTÁS ÉS MEGJELENÍTÉS
-        skeletonLoader.classList.add('hidden'); 
-        realContent.classList.remove('hidden'); 
-        
-        // Egy extra nullázás, miután a 'hidden' lekerült (biztos ami biztos)
-        if (contentBox) contentBox.scrollTop = 0;
+        // Színváltás (Blobok)
+        const hue = Math.floor(Math.random() * 360);
+        document.querySelectorAll('.blob').forEach((b, i) => {
+            b.style.background = `hsla(${hue + (i * 25)}, 75%, 50%, 0.5)`;
+        });
 
-        card.classList.add('card-dealing'); 
+        // MEGJELENÍTÉS
+        if (skeletonLoader) skeletonLoader.classList.add('hidden');
+        if (realContent) realContent.classList.remove('hidden');
+        card.classList.add('card-dealing');
 
-        // 9. REAKTIVÁLÁS
-        btn.disabled = false;
-        btn.innerText = "NEXT TOPIC";
-
-       setTimeout(() => {
-    card.classList.remove('card-dealing');
-    isDealing = false;
-
-    // Itt a trükk: Előbb feloldjuk a zárat, de a lerpFactor-t 
-    // nagyon kicsire vesszük, hogy lassan "ússzon be" a helyére
-    lerpFactor = 0.001; 
-    isLocked = false;
-
-    // 1 másodperc alatt fokozatosan gyorsítjuk fel a követést
-    let speedUp = setInterval(() => {
-        if (lerpFactor < 0.08) {
-            lerpFactor += 0.005;
-        } else {
-            clearInterval(speedUp);
-        }
-    }, 50);
-
-    if (contentBox) contentBox.style.overflowY = "auto";
-}, 800);
+        setTimeout(() => {
+            card.classList.remove('card-dealing');
+            isDealing = false;
+            isLocked = false;
+            lerpFactor = 0.001;
+            if (contentBox) contentBox.style.overflowY = "auto";
+            
+            let speedUp = setInterval(() => {
+                if (lerpFactor < 0.08) lerpFactor += 0.005;
+                else clearInterval(speedUp);
+            }, 50);
+        }, 800);
 
     } catch (err) {
-        console.error(err);
-        btn.disabled = false;
-        btn.innerText = "TRY AGAIN";
-        skeletonLoader.classList.add('hidden');
+        console.error("Hiba történt:", err);
+        isDealing = false;
+        isLocked = false;
+        if (skeletonLoader) skeletonLoader.classList.add('hidden');
     }
 }
 
-// --- 5. MOZGÁS KEZELÉSE ---
-window.addEventListener('mousemove', (e) => {
-    if (window.innerWidth < 768 || isLocked) return;
-    
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - (rect.left + rect.width / 2);
-    const y = e.clientY - (rect.top + rect.height / 2);
-    
-    tgtX = (-y / (window.innerHeight / 2)) * 10;
-    tgtY = (x / (window.innerWidth / 2)) * 10;
-});
-
-window.addEventListener('mouseleave', () => {
-    tgtX = 0; tgtY = 0;
-});
-
-function handleOrientation(event) {
-    if (window.innerWidth >= 768 || isLocked) return;
-    const beta = event.beta;   
-    const gamma = event.gamma; 
-    tgtX = Math.max(Math.min((beta - 45) / 1.5, 10), -10);
-    tgtY = Math.max(Math.min(gamma / 1.5, 10), -10);
-}
-
-// --- JAVÍTOTT updateMotion() – 3D VASTAGSÁG HATÁSSAL A KÉPEN ---
+// --- 5. MOZGÁS ÉS SWIPE (PC ÉS MOBIL) ---
 function updateMotion() {
-    if (isLocked) {
-        tgtX = 0;
+    if (isLocked || isDragging) {
+        tgtX = 0; 
         tgtY = 0;
     }
 
     curX += (tgtX - curX) * lerpFactor;
     curY += (tgtY - curY) * lerpFactor;
 
-    // --- KÁRTYA MOZGATÁSA (Már megvan) ---
-    const img = document.getElementById('topic-image');
-    if (img && !isDealing) {
-        img.style.transform = `rotateX(${curX}deg) rotateY(${curY}deg) translateZ(35px)`;
-        // ... árnyék kódod ...
-    }
-
-    if (card && !isDealing) {
+    // 1. A KÁRTYA ALAP MOZGÁSA
+    if (card) {
         card.style.transform = `rotateX(${curX}deg) rotateY(${curY}deg)`;
     }
 
-    // --- ÚJ: HÁTTÉR BUBORÉKOK DINAMIKUS MOZGATÁSA ---
-    const blobs = document.querySelectorAll('.blob');
-    blobs.forEach((blob, index) => {
-        // Minden blob kicsit más intenzitással reagál (parallax mélység)
-        const intensity = (index + 1) * 15; 
-        
-        // Ellentétes irányú mozgás: ha jobbra döntöd, a háttér balra úszik
-        const moveX = -curY * intensity; 
-        const moveY = curX * intensity;
-        
-        // Alkalmazzuk a mozgást (megtartva az eredeti lebegést, ha van)
-        blob.style.transform = `translate(${moveX}px, ${moveY}px) scale(${1 + (curX/100)})`;
+    // 2. A KÉP KIEMELÉSE (Ez adja a mélységet a kártyán belül)
+    const img = document.getElementById('topic-image');
+    if (img) {
+        // A translateZ(40px) miatt a kép "lebeg" a kártya felett
+        img.style.transform = `rotateX(${curX}deg) rotateY(${curY}deg) translateZ(40px)`;
+    }
+
+    // 3. HÁTTÉR BLOBOK ELLENTÉTES MOZGÁSA (Parallax háttér)
+    document.querySelectorAll('.blob').forEach((blob, index) => {
+        const intensity = (index + 1) * 12; 
+        // Ha a kártyát jobbra döntöd (curY), a háttér balra úszik (-curY)
+        blob.style.transform = `translate(${-curY * intensity}px, ${curX * intensity}px)`;
     });
 
     requestAnimationFrame(updateMotion);
 }
-updateMotion();
 
-function requestDeviceOrientation() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(res => {
-            if (res === 'granted') window.addEventListener('deviceorientation', handleOrientation);
-        });
-    } else {
-        window.addEventListener('deviceorientation', handleOrientation);
-    }
-}
+window.addEventListener('mousemove', (e) => {
+    if (window.innerWidth < 768 || isLocked || isDragging) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - (rect.left + rect.width / 2);
+    const y = e.clientY - (rect.top + rect.height / 2);
+    tgtX = (-y / (window.innerHeight / 2)) * 10;
+    tgtY = (x / (window.innerWidth / 2)) * 10;
+});
 
-// --- 6. DINAMIKUS SCROLLBAR ---
-const contentBox = card.querySelector('.card-content');
-let scrollTimer = null;
-
-if (contentBox) {
-    contentBox.addEventListener('scroll', () => {
-        contentBox.classList.add('is-scrolling');
-        clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(() => {
-            contentBox.classList.remove('is-scrolling');
-        }, 800);
-    });
-}
-
-// --- UNIVERZÁLIS HÚZÁS KEZELÉS (EGÉR + TOUCH) ---
-let isDragging = false;
-let startX = 0;
-let currentTranslateX = 0;
-
-// Egér lenyomása / Érintés kezdete
+// Swipe kezelők
 const dragStart = (e) => {
     if (isDealing) return;
     isDragging = true;
     startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    card.style.transition = 'none';
 };
-
-// Egér mozgatása / Húzás
-// --- JAVÍTOTT, HATÁROZOTTABB HÚZÁS KEZELÉS ---
 const dragMove = (e) => {
     if (!isDragging || isDealing) return;
-    
     const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
     currentTranslateX = x - startX;
-
-    // Csak ha valóban elmozdultunk (küszöb)
-    if (Math.abs(currentTranslateX) > 5) {
-        // --- KRITIKUS MÓDOSÍTÁSOK ---
-        
-        // 1. ERŐSEBB DŐLÉS (Az osztót 15-ről 10-re vettük le = agresszívabb forgatás)
-        const rotation = currentTranslateX / 10; 
-        
-        // 2. DINAMIKUS SKÁLÁZÁS (Picit összemegy a távolságtól függően, min. 0.9-ig)
-        // Minél messzebb húzod, annál kisebb lesz
-        const scale = 1 - Math.abs(currentTranslateX) / 2500; 
-        
-        // 3. ERŐSEBB ELHALVÁNYULÁS (Az osztót 700-ról 500-ra vettük le = hamarabb eltűnik)
-        const opacity = 1 - Math.abs(currentTranslateX) / 500;
-
-        // ALKALMAZZUK A HATÁROZOTTABB MOZGÁST
-        // Hozzáadtuk a rotateZ-t is a dőléshez, és a scale-t
-        card.style.transform = `translateX(${currentTranslateX}px) rotate(${rotation}deg) scale(${scale})`;
-        card.style.opacity = opacity;
-        
-        // --- EXTRA: HÁTTÉR BUBORÉKOK ELLENTÉTES MOZGÁSA ---
-        // A háttér ellentétes irányba mozdul, hogy még jobban kiemelje a kártya mozgását
-        document.querySelectorAll('.blob').forEach((blob, index) => {
-            const intensity = (index + 1) * 2; 
-            blob.style.transform = `translateX(${-currentTranslateX * intensity}px)`;
-        });
-    }
+    const rot = currentTranslateX / 10;
+    card.style.transform = `translateX(${currentTranslateX}px) rotate(${rot}deg)`;
+    card.style.opacity = 1 - Math.abs(currentTranslateX) / 600;
 };
-
-// Egér felengedése / Elengedés
 const dragEnd = () => {
     if (!isDragging) return;
     isDragging = false;
-
-    if (Math.abs(currentTranslateX) > 120) { // Küszöb az eldobáshoz
-        const direction = currentTranslateX > 0 ? 1000 : -1000;
-        card.style.transition = 'transform 0.4s ease-out, opacity 0.4s';
-        card.style.transform = `translateX(${direction}px) rotate(${direction / 50}deg)`;
+    if (Math.abs(currentTranslateX) > 120) {
         card.style.opacity = '0';
-
-        setTimeout(() => {
-            getNewTopic();
-            resetCardPosition();
-        }, 200);
-    } else {
-        resetCardPosition();
-    }
-    currentTranslateX = 0;
+        setTimeout(() => { getNewTopic(); resetPos(); }, 200);
+    } else { resetPos(); }
 };
+function resetPos() {
+    card.style.transition = '0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    card.style.transform = 'translateX(0) rotate(0deg)';
+    card.style.opacity = '1';
+    setTimeout(() => card.style.transition = '', 500);
+}
 
-// ESEMÉNYEK HOZZÁADÁSA
-// Touch (Mobil)
-card.addEventListener('touchstart', dragStart, { passive: true });
-window.addEventListener('touchmove', dragMove, { passive: false });
-window.addEventListener('touchend', dragEnd);
-
-// Mouse (Gép)
 card.addEventListener('mousedown', dragStart);
 window.addEventListener('mousemove', dragMove);
 window.addEventListener('mouseup', dragEnd);
+card.addEventListener('touchstart', dragStart);
+window.addEventListener('touchmove', dragMove);
+window.addEventListener('touchend', dragEnd);
 
-// --- 7. INDÍTÁS ---
-btn.addEventListener('click', getNewTopic);
+// INDÍTÁS
+updateMotion();
 window.addEventListener('load', () => setTimeout(getNewTopic, 300));
+
+// --- MOBIL SZENZOR KEZELÉS ---
+function handleOrientation(event) {
+    // Csak mobil nézetben és ha nem húzzuk a kártyát
+    if (window.innerWidth >= 768 || isLocked || isDragging) return;
+
+    // Beta: előre-hátra (X tengely), Gamma: balra-jobbra (Y tengely)
+    // A -45 korrekció azért kell, mert a telefont általában döntve tartjuk
+    tgtX = Math.max(Math.min((event.beta - 45) / 1.5, 12), -12);
+    tgtY = Math.max(Math.min(event.gamma / 1.5, 12), -12);
+}
+
+// iOS 13+ specifikus engedélykérés
+function requestMotionPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            })
+            .catch(console.error);
+    } else {
+        // Android vagy régebbi iOS esetén simán hozzáadjuk
+        window.addEventListener('deviceorientation', handleOrientation);
+    }
+}
+
+// --- JAVÍTOTT LERP (SIMÍTÁS) A RENDERBEN ---
+function updateMotion() {
+    // Ha húzzuk a kártyát, a dőlés célértéke legyen 0, hogy ne zavarja a swipe-ot
+    if (isLocked || isDragging) {
+        tgtX = 0; tgtY = 0;
+    }
+
+    // A LERP algoritmus: cur + (target - cur) * factor
+    curX += (tgtX - curX) * lerpFactor;
+    curY += (tgtY - curY) * lerpFactor;
+
+    // Alkalmazás a kártyára
+    if (card && !isDealing && !isDragging) {
+        card.style.transform = `rotateX(${curX}deg) rotateY(${curY}deg)`;
+    }
+
+    // Parallax buborékok (ellentétes irányú, lágy mozgás)
+    document.querySelectorAll('.blob').forEach((blob, index) => {
+        const intensity = (index + 1) * 12; 
+        blob.style.transform = `translate(${-curY * intensity}px, ${curX * intensity}px)`;
+    });
+
+    requestAnimationFrame(updateMotion);
+}
+
+
