@@ -38,6 +38,28 @@ body::after {
     pointer-events: none;
 }
 
+/* MINDEN ELEMRE VONATKOZÓ TILTÁS */
+*, *::before, *::after {
+    -webkit-user-select: none;  /* Safari */
+    -ms-user-select: none;      /* IE/Edge */
+    user-select: none;          /* Általános */
+    -webkit-touch-callout: none; /* iOS hosszú nyomás menü tiltása */
+    -webkit-tap-highlight-color: transparent; /* Mobil érintés villanás kék keretének eltüntetése */
+}
+
+/* KIVÉTEL: Ha mégis szeretnéd, hogy a kártya szövegét ki lehessen másolni (opcionális) */
+/* Ha azt akarod, hogy abszolút semmi ne legyen kijelölhető, ezt a részt hagyd ki! */
+.card-content p, .card-content h2 {
+    user-select: none; 
+}
+
+/* KÉPEK ELHÚZÁSÁNAK TILTÁSA (hogy ne a böngésző "szellemképe" jöjjön elő húzáskor) */
+img {
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none; /* Így az egér események "átmennek" a képen a kártyára */
+}
+
 @keyframes candleLight {
     0% { transform: scale(1) translate(0, 0); opacity: 0.7; }
     25% { transform: scale(1.2) translate(80px, -40px); opacity: 1; }
@@ -141,6 +163,12 @@ body::after {
     opacity: 0; /* JS indítja */
     transform: translate(0, 0); 
     will-change: transform, opacity;
+    cursor: grab; /* Nyitott tenyér kurzor */
+    user-select: none; /* Szöveg kijelölés letiltása húzás közben */
+}
+
+.card:active {
+    cursor: grabbing; /* Zárt tenyér, amikor fogod a kártyát */
 }
 
 /* --- 5. JAVÍTOTT ANIMÁCIÓ (SNAPPING ELLEN) --- */

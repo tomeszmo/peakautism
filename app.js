@@ -134,6 +134,37 @@ document.querySelectorAll('.blob').forEach(blob => {
     blob.style.background = `hsla(${randomHue}, 70%, 50%, 0.6)`;
 });
 
+
+        // --- DINAMIKUS SZÍN GENERÁLÁSA ÉS ALKALMAZÁSA ---
+try {
+    const randomHue2 = Math.floor(Math.random() * 360); 
+
+    // 1. Háttér blobok
+    const blobs = document.querySelectorAll('.blob');
+    if (blobs.length > 0) {
+        blobs.forEach((blob, index) => {
+            const hueShift = index * 25; 
+            blob.style.background = `hsla(${randomHue2 + hueShift}, 75%, 50%, 0.5)`;
+        });
+    }
+
+    // 2. Gomb színezése - Biztonsági ellenőrzéssel
+    const actionBtn = document.getElementById('new-topic-btn'); // Közvetlen lekérés a hiba ellen
+    if (actionBtn) {
+        const mainColor = `hsl(${randomHue2}, 70%, 45%)`;
+        const darkEdge = `hsl(${randomHue2}, 70%, 30%)`;
+        const glowColor = `hsla(${randomHue2}, 70%, 50%, 0.4)`;
+
+        actionBtn.style.backgroundColor = mainColor;
+        actionBtn.style.borderBottomColor = darkEdge;
+        
+        // CSS változó beállítása az animációhoz
+        actionBtn.style.setProperty('--glow-color', glowColor);
+    }
+} catch (colorError) {
+    console.warn("Színezési hiba (kihagyva):", colorError);
+}
+
         // --- KRITIKUS PONT: GÖRDÍTÉS ÚJRA KÉNYSZERÍTÉSE ---
         if (contentBox) {
             contentBox.scrollTop = 0; // Második fázisú nullázás a tartalom betöltése után
@@ -267,6 +298,87 @@ if (contentBox) {
         }, 800);
     });
 }
+
+// --- UNIVERZÁLIS HÚZÁS KEZELÉS (EGÉR + TOUCH) ---
+let isDragging = false;
+let startX = 0;
+let currentTranslateX = 0;
+
+// Egér lenyomása / Érintés kezdete
+const dragStart = (e) => {
+    if (isDealing) return;
+    isDragging = true;
+    startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    card.style.transition = 'none';
+};
+
+// Egér mozgatása / Húzás
+// --- JAVÍTOTT, HATÁROZOTTABB HÚZÁS KEZELÉS ---
+const dragMove = (e) => {
+    if (!isDragging || isDealing) return;
+    
+    const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    currentTranslateX = x - startX;
+
+    // Csak ha valóban elmozdultunk (küszöb)
+    if (Math.abs(currentTranslateX) > 5) {
+        // --- KRITIKUS MÓDOSÍTÁSOK ---
+        
+        // 1. ERŐSEBB DŐLÉS (Az osztót 15-ről 10-re vettük le = agresszívabb forgatás)
+        const rotation = currentTranslateX / 10; 
+        
+        // 2. DINAMIKUS SKÁLÁZÁS (Picit összemegy a távolságtól függően, min. 0.9-ig)
+        // Minél messzebb húzod, annál kisebb lesz
+        const scale = 1 - Math.abs(currentTranslateX) / 2500; 
+        
+        // 3. ERŐSEBB ELHALVÁNYULÁS (Az osztót 700-ról 500-ra vettük le = hamarabb eltűnik)
+        const opacity = 1 - Math.abs(currentTranslateX) / 500;
+
+        // ALKALMAZZUK A HATÁROZOTTABB MOZGÁST
+        // Hozzáadtuk a rotateZ-t is a dőléshez, és a scale-t
+        card.style.transform = `translateX(${currentTranslateX}px) rotate(${rotation}deg) scale(${scale})`;
+        card.style.opacity = opacity;
+        
+        // --- EXTRA: HÁTTÉR BUBORÉKOK ELLENTÉTES MOZGÁSA ---
+        // A háttér ellentétes irányba mozdul, hogy még jobban kiemelje a kártya mozgását
+        document.querySelectorAll('.blob').forEach((blob, index) => {
+            const intensity = (index + 1) * 2; 
+            blob.style.transform = `translateX(${-currentTranslateX * intensity}px)`;
+        });
+    }
+};
+
+// Egér felengedése / Elengedés
+const dragEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    if (Math.abs(currentTranslateX) > 120) { // Küszöb az eldobáshoz
+        const direction = currentTranslateX > 0 ? 1000 : -1000;
+        card.style.transition = 'transform 0.4s ease-out, opacity 0.4s';
+        card.style.transform = `translateX(${direction}px) rotate(${direction / 50}deg)`;
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+            getNewTopic();
+            resetCardPosition();
+        }, 200);
+    } else {
+        resetCardPosition();
+    }
+    currentTranslateX = 0;
+};
+
+// ESEMÉNYEK HOZZÁADÁSA
+// Touch (Mobil)
+card.addEventListener('touchstart', dragStart, { passive: true });
+window.addEventListener('touchmove', dragMove, { passive: false });
+window.addEventListener('touchend', dragEnd);
+
+// Mouse (Gép)
+card.addEventListener('mousedown', dragStart);
+window.addEventListener('mousemove', dragMove);
+window.addEventListener('mouseup', dragEnd);
 
 // --- 7. INDÍTÁS ---
 btn.addEventListener('click', getNewTopic);
