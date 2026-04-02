@@ -35,7 +35,13 @@
                 </div>
 
                 <div id="real-content" class="card-content hidden">
-                    <h2 id="topic-title"></h2>
+                    <div class="card-header">
+                        <h2 id="topic-title"></h2>
+                        <button id="heart-btn" onclick="toggleFavorite(event)">
+                            <span class="heart-icon, heart-unfilled">🤍</span>
+                        </button>
+                    </div>
+
                     <div id="card-image-container" class="hidden">
                         <img id="topic-image" src="" alt="Kép">
                     </div>
@@ -45,14 +51,9 @@
                     </div>
 
                     <div id="ai-deep-dive" class="ai-section">
-                        <div id="ai-deep-dive" class="ai-section">
-    <button id="deep-dive-btn" onclick="getRelatedTopics(event)" style="position: relative; z-index: 10;">
-        <span>🔍</span> DEEP DIVE (Coming Soon...)
-    </button>
-    <div id="related-container" class="hidden">
-        <div id="related-list"></div>
-    </div>
-</div>
+                        <button id="deep-dive-btn" onclick="getRelatedTopics(event)" style="position: relative; z-index: 10;">
+                            <span>🔍</span> DEEP DIVE
+                        </button>
                         <div id="related-container" class="hidden">
                             <div id="related-list"></div>
                         </div>
@@ -68,6 +69,10 @@
                     <span id="topic-count" class="counter-value">0</span>
                 </div>
 
+                <div class="info-box favorites-toggle" onclick="toggleFavoritesModal()" style="cursor: pointer;">
+                    <span id="main-fav-icon" style="font-size: 1.4rem; color: white;">♡</span>
+                </div>
+
                 <div class="info-box language-selector">
                     <span class="lang-label">EN</span>
                     <label class="switch">
@@ -79,6 +84,41 @@
             </div>
         </footer>
     </div>
+
+    <div id="fav-modal" class="hidden">
+        <div class="modal-overlay" onclick="toggleFavoritesModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Kedvencek</h3>
+                <span class="close-modal" onclick="toggleFavoritesModal()">&times;</span>
+            </div>
+            <div id="fav-list">
+                </div>
+        </div>
+    </div>
+
+    <div id="favorites-overlay" class="hidden">
+    <div class="favorites-content">
+        <div class="favorites-header">
+            <h3>Favorites</h3>
+            <button id="close-favorites" onclick="toggleFavoritesModal(); toggleFavoritesView();">✕</button>
+        </div>
+        <div id="favorites-list">
+            </div>
+    </div>
+</div>
+
+<div id="gyro-popup" class="hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content gyro-card">
+        <h3>Gyroscopic Sensing</h3>
+        <p>Allow the app to use your device's gyroscope for a 3D effect?</p>
+        <div class="gyro-buttons">
+            <button onclick="setupGyro(true)" class="gyro-yes">YES</button>
+            <button onclick="setupGyro(false)" class="gyro-no">NO</button>
+        </div>
+    </div>
+</div>
 
     <script src="app.js"></script>
 </body>

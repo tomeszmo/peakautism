@@ -729,5 +729,295 @@ input:checked + .slider:before {
     font-size: 1.1rem;
 }
 
-.hidden { display: none !important; }
+/* --- SZÍV IKONOK EGYSÉGESEÍTÉSE (🤍 vs ❤️) --- */
+.favorites-toggle span, .heart-icon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    
+    /* FIX DOBOZ MÉRET: Így nem tud elmozdulni */
+    width: 32px !important; 
+    height: 32px !important;
+    
+    /* IKON LÁTHATÓ MÉRETE */
+    font-size: 22px !important; 
+    line-height: 1 !important;
+    
+    /* IGAZÍTÁS */
+    vertical-align: middle;
+    text-align: center;
+    
+    transition: transform 0.2s ease; /* Csak egy kis mozgás effekt */
+}
 
+/* KÜLÖN A FEHÉR SZÍVRE (🤍) */
+/* Ha a fehér még mindig nagynak tűnik, itt tudod finomhangolni */
+.heart-icon:not(.heart-filled) {
+    transform: scale(1); /* Ha nagy, vedd lejjebb: pl. scale(0.9) */
+}
+
+/* KÜLÖN A PIROS SZÍVRE (❤️) */
+.heart-filled {
+    color: #ff4757 !important;
+    /* A piros emoji alapból néha kisebbnek tűnik, mint a fehér, 
+       ezért egy pici scale-el utánaállítunk, ha kell */
+    transform: scale(1.05); 
+    
+    /* Eltüntetjük a körvonalat, ha korábban zavart */
+    -webkit-text-stroke: 0px !important;
+    text-shadow: 0 0 10px rgba(255, 71, 87, 0.4) !important;
+}
+
+.heart-unfilled {
+    color: #ff4757 !important;
+    /* A piros emoji alapból néha kisebbnek tűnik, mint a fehér, 
+       ezért egy pici scale-el utánaállítunk, ha kell */
+    transform: scale(1.05); 
+    
+    /* Eltüntetjük a körvonalat, ha korábban zavart */
+    -webkit-text-stroke: 0px !important;
+    text-shadow: 0 0 10px rgba(255, 71, 87, 0.4) !important;
+}
+
+/* A kártyán belüli szív gomb új, üveghatású stílusa */
+#heart-btn {
+    position: absolute;
+    bottom: 85px; /* Pontosan a Deep Dive gomb felett */
+    right: 15px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 30; /* Hogy biztosan a tartalom felett legyen */
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+}
+
+#heart-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#heart-btn .heart-icon {
+    font-size: 22px; /* Fix méret */
+    line-height: 1;
+}
+
+/* Ha elmentetted, kap egy kis ragyogást is */
+.heart-filled {
+    color: #ff4757 !important;
+    -webkit-text-stroke: 0px !important; /* Pirosnál ne legyen körvonal */
+    filter: drop-shadow(0 0 5px rgba(255, 71, 87, 0.5));
+}
+
+/* --- KEDVENCEK PANEL (OVERLAY) --- */
+#favorites-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Sötét áttetsző háttér */
+    backdrop-filter: blur(15px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.favorites-content {
+    width: 90%;
+    max-width: 450px;
+    height: 80vh;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.favorites-header {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.favorites-header h3 { color: white; margin: 0; font-weight: 700; }
+
+#close-favorites {
+    background: none; border: none; color: white;
+    font-size: 24px; cursor: pointer; opacity: 0.7;
+}
+
+/* LISTA ELRENDEZÉS */
+#favorites-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: grid;
+    gap: 15px;
+}
+
+/* EGY KIS KÁRTYA A LISTÁBAN */
+.fav-item {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.fav-item:active { transform: scale(0.95); }
+
+.fav-item img {
+    width: 60px; height: 60px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.fav-item-info h4 {
+    margin: 0; font-size: 14px; color: #0f172a;
+}
+
+/* Ha üres a lista */
+.empty-msg {
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+    margin-top: 50px;
+}
+
+#fav-modal h3 {
+    /* Átveszi az oldal alapértelmezett betűtípusát */
+    font-family: inherit; 
+    
+    /* Beállítja a vastagságot és a stílust a fejléc mintájára */
+    font-weight: 800; 
+    text-transform: uppercase; 
+    
+    /* Szín és alapvető elrendezés */
+    color: white;
+    margin: 0;
+    padding: 15px; /* Hogy ne érjen a széléhez */
+    font-size: 1.2rem;
+    display: inline-block; /* Hogy a gomb mellé férjen, ha kell */
+}
+
+/* A lista konténere: fix magasság és görgetés */
+#fav-list {
+    max-height: 400px; /* Vagy amennyit jónak látsz */
+    overflow-y: auto;  /* Csak akkor jelenik meg görgetősáv, ha kell */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px;
+}
+
+/* A kártyák egységes mérete */
+.fav-item {
+    flex: 0 0 80px;    /* NEM engedjük zsugorodni vagy nyúlni, fix 80px magas */
+    min-height: 80px;  /* Biztonság kedvéért */
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.fav-item:hover {
+    transform: scale(1.02);
+}
+
+/* --- EGYSÉGES, MINIMALISTA SCROLLBAR MINDEN LISTÁHOZ --- */
+
+/* 1. Chrome, Safari, Edge, Opera */
+#fav-list::-webkit-scrollbar, 
+#favorites-list::-webkit-scrollbar,
+.card-content::-webkit-scrollbar {
+    width: 6px !important; /* Fix vékony szélesség */
+    display: block !important;
+}
+
+#fav-list::-webkit-scrollbar-track,
+#favorites-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1) !important;
+    border-radius: 10px;
+}
+
+#fav-list::-webkit-scrollbar-thumb,
+#favorites-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2) !important; /* Halvány fehér csúszka */
+    border-radius: 10px !important;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+#fav-list::-webkit-scrollbar-thumb:hover,
+#favorites-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 197, 94, 0.6) !important; /* Hoverre zöldes lesz */
+}
+
+/* 2. Firefox támogatás */
+#fav-list, #favorites-list {
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+/* TÖRLÉS GOMB STÍLUSA A KÁRTYÁN BELÜL */
+.remove-fav-btn {
+    margin-left: auto;
+    padding: 10px;
+    color: #ff4757;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.remove-fav-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+#gyro-popup {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.gyro-card {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    padding: 30px;
+    text-align: center;
+    color: white;
+    max-width: 300px;
+}
+
+.gyro-buttons {
+    display: flex; gap: 10px; margin-top: 20px;
+}
+
+.gyro-buttons button {
+    flex: 1; padding: 12px; border: none; border-radius: 15px;
+    font-weight: 700; cursor: pointer;
+}
+
+.gyro-yes { background: #22c55e; color: white; }
+.gyro-no { background: rgba(255,255,255,0.1); color: white; }
+
+.hidden { display: none !important; }
