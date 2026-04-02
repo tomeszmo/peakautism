@@ -35,23 +35,48 @@
                 </div>
 
                 <div id="real-content" class="card-content hidden">
-                    <h2 id="topic-title">Loading...</h2>
+                    <h2 id="topic-title"></h2>
                     <div id="card-image-container" class="hidden">
                         <img id="topic-image" src="" alt="Kép">
                     </div>
-                    <div id="summary-text">Kattints a gombra!</div>
+                    <div id="summary-text"></div>
                     <div class="source-wrapper">
                         <a id="source-link" href="#" target="_blank">OPEN SOURCE ↗</a>
+                    </div>
+
+                    <div id="ai-deep-dive" class="ai-section">
+                        <div id="ai-deep-dive" class="ai-section">
+    <button id="deep-dive-btn" onclick="getRelatedTopics(event)" style="position: relative; z-index: 10;">
+        <span>🔍</span> DEEP DIVE (Coming Soon...)
+    </button>
+    <div id="related-container" class="hidden">
+        <div id="related-list"></div>
+    </div>
+</div>
+                        <div id="related-container" class="hidden">
+                            <div id="related-list"></div>
+                        </div>
                     </div>
                 </div>
             </main>
         </div>
 
         <footer>
-            <div id="session-counter" class="counter-badge">
-    <span class="counter-label">TOPICS EXPLORED</span>
-    <span id="topic-count" class="counter-value">0</span>
-</div>
+            <div class="footer-controls">
+                <div id="session-counter" class="info-box">
+                    <span class="counter-label">TOPICS</span>
+                    <span id="topic-count" class="counter-value">0</span>
+                </div>
+
+                <div class="info-box language-selector">
+                    <span class="lang-label">EN</span>
+                    <label class="switch">
+                        <input type="checkbox" id="lang-toggle" checked onchange="toggleLanguage()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="lang-label">HU</span>
+                </div>
+            </div>
         </footer>
     </div>
 
